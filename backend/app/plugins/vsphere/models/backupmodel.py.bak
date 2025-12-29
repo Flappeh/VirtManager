@@ -1,0 +1,111 @@
+import uuid
+
+from pydantic import EmailStr
+from sqlmodel import Field, Relationship, SQLModel
+
+class VCenterBase(SQLModel):
+    url: str = Field(default=None)
+    user: str = Field(unique=True, index=True, max_length=255)
+    is_active: bool = False
+
+class VCenterCreate(VCenterBase):
+    password: str = Field(min_length=8, max_length=128)
+
+class VCenterRegister(SQLModel):
+    url: str = Field(default=None)
+    user: str = Field(unique=True, index=True, max_length=255)
+    password: str = Field(min_length=8, max_length=128)
+    
+class VCenter(VCenterBase, table=True):
+    __tablename__ = "vcenter"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    hashed_password: str
+    datacenters: list["VCenterDatacenter"] = Relationship(back_populates="owner", cascade_delete=True)
+    clusters: list["VCenterCluster"] = Relationship(back_populates="owner", cascade_delete=True)
+    datastores: list["VCenterDatastore"] = Relationship(back_populates="owner", cascade_delete=True)
+    hosts: list["VCenterHost"] = Relationship(back_populates="owner", cascade_delete=True)
+    networks: list["VCenterNetwork"] = Relationship(back_populates="owner", cascade_delete=True)
+    vms: list["VCenterVM"] = Relationship(back_populates="owner", cascade_delete=True)
+    
+class VCenterDatacenterBase(SQLModel):
+    name: str = Field(default=None)
+    datacenter: str = Field(default=None)
+
+class VCenterDatacenter(VCenterDatacenterBase, table=True):
+    __tablename__ = "vcenter_datacenter"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_id: uuid.UUID = Field(
+        foreign_key="vcenter.id", nullable=False, ondelete="CASCADE"
+    )
+    owner: VCenter | None = Relationship(back_populates="datacenters")
+
+class VCenterClusterBase(SQLModel):
+    drs_enabled: bool = Field(default=False)
+    cluster: str = Field()
+    name: str = Field()
+    has_enabled: bool = Field(default=False)
+
+class VCenterCluster(VCenterClusterBase, table=True):
+    __tablename__ = "vcenter_cluster"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_id: uuid.UUID = Field(
+        foreign_key="vcenter.id", nullable=False, ondelete="CASCADE"
+    )
+    owner: VCenter | None = Relationship(back_populates="clusters")
+
+class VCenterDatastoreBase(SQLModel):
+    datastore: str = Field()
+    name: str = Field()
+    type: str = Field()
+    free_space: int = Field()
+    capacity: int = Field()
+
+class VCenterDatastore(VCenterDatastoreBase, table=True):
+    __tablename__ = "vcenter_datastore"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_id: uuid.UUID = Field(
+        foreign_key="vcenter.id", nullable=False, ondelete="CASCADE"
+    )
+    owner: VCenter | None = Relationship(back_populates="datastores")
+
+class VCenterHostBase(SQLModel):
+    host: str = Field()
+    name: str = Field()
+    connection_state: str = Field()
+    power_state : str = Field()
+
+class VCenterHost(VCenterHostBase, table=True):
+    __tablename__ = "vcenter_host"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_id: uuid.UUID = Field(
+        foreign_key="vcenter.id", nullable=False, ondelete="CASCADE"
+    )
+    owner: VCenter | None = Relationship(back_populates="hosts")
+
+class VCenterNetworkBase(SQLModel):
+    name: str = Field()
+    type: str = Field()
+    network: str = Field()
+
+class VCenterNetwork(VCenterNetworkBase, table=True):
+    __tablename__ = "vcenter_network"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_id: uuid.UUID = Field(
+        foreign_key="vcenter.id", nullable=False, ondelete="CASCADE"
+    )
+    owner: VCenter | None = Relationship(back_populates="networks")
+
+class VCenterVMBase(SQLModel):
+    vm: str = Field()
+    name: str = Field()
+    power_state: str = Field()
+    cpu_count: int = Field()
+    memory_size: int = Field()
+    
+class VCenterVM(VCenterVMBase, table=True):
+    __tablename__ = "vcenter_vm"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_id: uuid.UUID = Field(
+        foreign_key="vcenter.id", nullable=False, ondelete="CASCADE"
+    )
+    owner: VCenter | None = Relationship(back_populates="vms")

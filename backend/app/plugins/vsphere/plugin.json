@@ -1,0 +1,6 @@
+{
+  "name": "vsphere",
+  "version": "0.0.1",
+  "description": "VMware vSphere integration",
+  "schema": "vsphere"
+}
