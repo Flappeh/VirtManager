@@ -2,6 +2,7 @@ import sentry_sdk
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
+from app.core.plugins.loader import load_enabled_plugins, PluginLoadError
 
 from app.api.main import api_router
 from app.core.config import settings
@@ -31,3 +32,16 @@ if settings.all_cors_origins:
     )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+try:
+    enabled_plugins = load_enabled_plugins()
+    for plugin_instance in enabled_plugins:
+        for router in plugin_instance.register_routers():
+            app.include_router(
+                router,
+                prefix=f"{settings.API_V1_STR}/plugins/{plugin_instance.name}",
+                tags=[plugin_instance.name],
+            )
+except PluginLoadError as e:
+    print(f"PLUGIN LOAD FAILED (degraded mode): {e}")
+    # app.state.plugin_load_error = str(e)  # Optional
