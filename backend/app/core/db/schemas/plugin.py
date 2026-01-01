@@ -7,6 +7,7 @@ class PluginBase(SQLModel):
     name: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=500)
     version: str 
+    schema: str
     enabled: bool
     
 # Properties to return via API, id is always required
@@ -32,3 +33,11 @@ class PluginDiscover(SQLModel):
 class PluginSync(SQLModel):
     count: int
     status: str
+    
+class PluginDownload(SQLModel):
+    id: str
+    name: str
+    version: str
+    download_url: str
+    archive_url: str
+    archive_type: str
