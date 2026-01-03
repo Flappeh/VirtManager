@@ -162,18 +162,6 @@ async def download_plugin(
         "next_step": "syncing_metadata"
     }
 
-@router.post("/{name}/activate")
-def activate_plugin(name: str, session: SessionDep):
-    plugin = get_plugin_by_name(session, name)
-    if plugin is None:
-        raise HTTPException(status_code=404, detail="Plugin not registered in DB. Run /plugins/sync first.")
-    if plugin.enabled:
-        raise HTTPException(400, "Already active")
-
-    result, plugin = set_plugin_enabled(session, name, True)
-    return {"name": name, "enabled": result, "restart_required": True}
-
-
 @router.post("/{name}/deactivate")
 def deactivate_plugin(name: str, session: SessionDep):
     plugin = get_plugin_by_name(session, name)
@@ -191,7 +179,7 @@ def activate_plugin(name: str, session: SessionDep):
     plugin = get_plugin_by_name(session, name)
     if plugin is None:
         raise HTTPException(status_code=404, detail="Plugin not registered in DB.")
-    if not plugin.enabled:
+    if plugin.enabled:
         raise HTTPException(400, "Already active")
     
     ensure_plugin_schema(session, name)

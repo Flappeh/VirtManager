@@ -1,7 +1,7 @@
 import uuid
 from typing import Any, List, Dict
 
-from sqlmodel import Session, select, delete
+from sqlmodel import Session, select, delete, text
 from app.core.db.schemas.plugin import PluginDiscover, PluginMeta, PluginDownload
 from app.core.db.models.plugin import Plugin
 from app.core.plugins.discovery import discover_plugins
@@ -157,36 +157,38 @@ def extract_archive(archive_path: Path, target_dir: Path, archive_type: str):
     print(f"✓ Extracted {archive_type} → {target_dir}")
 
 def ensure_plugin_schema(session: Session, schema_name: str):
+    print("Running ensure")
     """CREATE SCHEMA IF NOT EXISTS + idempotent grants."""
     # Schema creation (safe to run 100x)
-    session.exec(f"""
+    session.exec(text(f"""
         CREATE SCHEMA IF NOT EXISTS {schema_name};
-    """)
+    """))
     
     # Grants (safe to run 100x - no error on duplicate)
-    session.exec(f"""
+    session.exec(text(f"""
         GRANT ALL PRIVILEGES ON SCHEMA {schema_name} TO current_user;
         GRANT USAGE, CREATE ON SCHEMA {schema_name} TO current_user;
-    """)
+    """))
     
     # Default privileges (safe idempotent)
-    session.exec(f"""
+    session.exec(text(f"""
         ALTER DEFAULT PRIVILEGES IN SCHEMA {schema_name} 
         GRANT ALL PRIVILEGES ON TABLES TO current_user;
         ALTER DEFAULT PRIVILEGES IN SCHEMA {schema_name} 
         GRANT ALL PRIVILEGES ON SEQUENCES TO current_user;
-    """)
+    """))
     
     session.commit()
 
 def drop_plugin_schema(session: Session, schema_name: str):
     """DROP SCHEMA CASCADE (uninstall only)."""
-    session.exec(f"""
+    session.exec(text(f"""
         DROP SCHEMA IF EXISTS {schema_name} CASCADE;
-    """)
+    """))
     session.commit()
-
+    
 def run_plugin_migrations(session: Session, plugin: Plugin):
+
     alembic_dir = Path("app/core/alembic")
 
     check_result = subprocess.run(
