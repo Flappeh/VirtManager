@@ -182,7 +182,7 @@ def activate_plugin(name: str, session: SessionDep):
     if plugin.enabled:
         raise HTTPException(400, "Already active")
     
-    ensure_plugin_schema(session, name)
+    # ensure_plugin_schema(session, name)
     run_plugin_migrations(session, plugin)
     
     result, plugin = set_plugin_enabled(session, name, True)

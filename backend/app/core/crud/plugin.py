@@ -9,11 +9,13 @@ from app.core.plugins.discovery import discover_plugins
 import zipfile
 import aiohttp
 import shutil
-import asyncio
+import sys
 import subprocess
 from pathlib import Path
 import tarfile
 
+PROJECT_ROOT = Path(__file__).resolve().parents[3]  # backend/
+ALEMBIC_INI = PROJECT_ROOT / "alembic.ini"
 
 def list_downloaded() -> List[PluginDiscover]:
     discovered = discover_plugins()
@@ -187,35 +189,36 @@ def drop_plugin_schema(session: Session, schema_name: str):
     """))
     session.commit()
     
-def run_plugin_migrations(session: Session, plugin: Plugin):
-
-    alembic_dir = Path("app/core/alembic")
-
-    check_result = subprocess.run(
-        ["alembic", "check"], 
-        cwd=alembic_dir, 
-        capture_output=True, 
-        text=True
+def run_plugin_migrations(session: Session, plugin: Plugin) -> bool:
+    ALEMBIC_DIR = Path("app/core/alembic")
+    
+    # VENV SAFE: python -m alembic (uses current venv)
+    rev = subprocess.run(
+        [sys.executable, "-m", "alembic", "-c", str(ALEMBIC_INI), "revision", "--autogenerate", 
+         f"-m", f"{plugin.name}: v{plugin.version}"],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
     )
     
-    migration_generated = False
+    if rev.returncode != 0:
+        print("❌ alembic revision failed:")
+        print(rev.stdout)
+        print(rev.stderr)
+        raise RuntimeError(f"Alembic failed for {plugin.name}")
+
+    up = subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+    )
     
-    if check_result.returncode != 0:  # Changes detected!
-        # AUTO revision
-        subprocess.run([
-            "alembic", "revision", "--autogenerate", 
-            f"-m", f"{plugin.name}: tables"
-        ], cwd=alembic_dir, check=True, capture_output=True)
-        migration_generated = True
-        print(f"✓ Generated migration for {plugin.name}")
-    else:
-        print(f"✓ No schema changes for {plugin.name}")
-    
-    # 3. ALWAYS upgrade (safe, fast if current)
-    subprocess.run([
-        "alembic", "upgrade", "head"
-    ], cwd=alembic_dir, check=True, capture_output=True)
-    
-    # 4. Enable
-    plugin.enabled = True
+    if up.returncode != 0:
+        print("❌ alembic upgrade failed:")
+        print(up.stdout)
+        print(up.stderr)
+        raise RuntimeError(f"Alembic upgrade failed")
+
     session.commit()
+    return True
