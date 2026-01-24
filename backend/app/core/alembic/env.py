@@ -2,6 +2,7 @@ import os
 from logging.config import fileConfig
 
 from alembic import context
+from sqlmodel import MetaData
 from sqlalchemy import engine_from_config, pool
 
 # this is the Alembic Config object, which provides
@@ -18,10 +19,22 @@ fileConfig(config.config_file_name)
 # target_metadata = mymodel.Base.metadata
 # target_metadata = None
 
-from app.models import SQLModel  # noqa
 from app.core.config import settings # noqa
+from app.core.db.base import load_core_models, get_core_metadata, get_plugins_metadata
 
-target_metadata = SQLModel.metadata
+load_core_models()
+target_metadata = MetaData()
+
+# 1. Core tables first
+core_md = get_core_metadata()
+for table in core_md.tables.values():
+    table.tometadata(target_metadata)
+
+# 2. Plugin tables - ensure FK targets exist
+plugin_md = get_plugins_metadata()
+plugin_tables = sorted(plugin_md.tables.values(), key=lambda t: t.name)  # Alphabetical sort
+for table in plugin_tables:
+    table.tometadata(target_metadata)
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
