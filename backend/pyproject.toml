@@ -22,6 +22,7 @@ dependencies = [
     "pip>=25.3",
     "aiohttp>=3.13.2",
     "asyncio>=4.0.0",
+    "pytz>=2025.2",
 ]
 
 [dependency-groups]

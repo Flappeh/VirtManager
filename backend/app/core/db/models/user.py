@@ -5,8 +5,8 @@ from sqlmodel import Field, Relationship, DateTime
 from app.core.db.base import Base
 from datetime import datetime, timezone
 
-def get_datetime_utc() -> datetime:
-    return datetime.now(timezone.asia)
+def get_datetime_now() -> datetime:
+    return datetime.now()
 
 # Database model, database table inferred from class name
 class User(Base, table=True):
@@ -23,7 +23,7 @@ class User(Base, table=True):
     )
     
     created_at: datetime | None = Field(
-        default_factory=get_datetime_utc,
+        default_factory=get_datetime_now,
         sa_type=DateTime(timezone=True),  # type: ignore
     )
     hashed_password: str
