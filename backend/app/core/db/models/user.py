@@ -1,10 +1,9 @@
 import uuid
 
 from pydantic import EmailStr
-from sqlmodel import Field, Relationship
+from sqlmodel import Field, Relationship, DateTime
 from app.core.db.base import Base
 from datetime import datetime, timezone
-
 
 def get_datetime_utc() -> datetime:
     return datetime.now(timezone.asia)
